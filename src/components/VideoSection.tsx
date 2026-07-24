@@ -2,15 +2,14 @@ import { Upload } from 'lucide-react';
 
 interface VideoSectionProps {
   videoUrl: string;
-  onReplaceVideo: (newUrl: string) => void;
+  onReplaceVideo: (file: File) => void;
 }
 
 export function VideoSection({ videoUrl, onReplaceVideo }: VideoSectionProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      onReplaceVideo(url);
+      onReplaceVideo(file);
     }
   };
 

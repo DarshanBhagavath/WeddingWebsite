@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { get, set } from 'idb-keyval';
 import { MapPin, Calendar, Heart, Video, Upload, Edit3 } from 'lucide-react';
 import { Slideshow } from './components/Slideshow';
 import { VideoSection } from './components/VideoSection';
@@ -24,27 +25,72 @@ export default function App() {
   const [photos, setPhotos] = useState(INITIAL_PHOTOS);
   const [video, setVideo] = useState(INITIAL_VIDEO);
 
-  const handleReplacePhoto = (index: number, newUrl: string) => {
+  // Load from IndexedDB on mount
+  useEffect(() => {
+    const loadMedia = async () => {
+      try {
+        const storedHero = await get('heroImage');
+        if (storedHero) setHeroImage(URL.createObjectURL(storedHero));
+
+        const storedVideo = await get('video');
+        if (storedVideo) setVideo(URL.createObjectURL(storedVideo));
+
+        const storedPhotos = [...INITIAL_PHOTOS];
+        for (let i = 0; i < INITIAL_PHOTOS.length; i++) {
+          const storedPhoto = await get(`photo_${i}`);
+          if (storedPhoto) {
+            storedPhotos[i] = URL.createObjectURL(storedPhoto);
+          }
+        }
+        setPhotos(storedPhotos);
+      } catch (err) {
+        console.error('Failed to load media from IndexedDB:', err);
+      }
+    };
+    loadMedia();
+  }, []);
+
+  const handleReplacePhoto = async (index: number, file: File) => {
+    const newUrl = URL.createObjectURL(file);
     setPhotos(prev => {
       const copy = [...prev];
       copy[index] = newUrl;
       return copy;
     });
+    try {
+      await set(`photo_${index}`, file);
+    } catch (err) {
+      console.error('Failed to save photo to IndexedDB:', err);
+    }
   };
 
-  const handleReplaceHero = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleReplaceHero = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setHeroImage(URL.createObjectURL(file));
+      try {
+        await set('heroImage', file);
+      } catch (err) {
+        console.error('Failed to save hero image to IndexedDB:', err);
+      }
+    }
+  };
+
+  const handleReplaceVideo = async (file: File) => {
+    setVideo(URL.createObjectURL(file));
+    try {
+      await set('video', file);
+    } catch (err) {
+      console.error('Failed to save video to IndexedDB:', err);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] font-['Montserrat'] text-[#2C2A28]">
       {/* Hero Section */}
-      <header className="relative h-[85vh] min-h-[600px] flex items-center justify-center overflow-hidden group">
+      <header className="relative h-[85vh] min-h-[600px] flex items-center justify-center overflow-hidden group bg-[#1A1918]">
         <div className="absolute inset-0">
-          <img src={heroImage} alt="Wedding Hero" className="w-full h-full object-cover" />
+          <img src={heroImage} alt="Wedding Hero" className="w-full h-full object-contain opacity-80" />
           <div className="absolute inset-0 bg-black/30 transition-colors duration-500 group-hover:bg-black/50" />
         </div>
         

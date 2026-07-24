@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 
 interface SlideshowProps {
   photos: string[];
-  onReplacePhoto: (index: number, newUrl: string) => void;
+  onReplacePhoto: (index: number, file: File) => void;
 }
 
 export function Slideshow({ photos, onReplacePhoto }: SlideshowProps) {
@@ -16,15 +16,14 @@ export function Slideshow({ photos, onReplacePhoto }: SlideshowProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      onReplacePhoto(currentIndex, url);
+      onReplacePhoto(currentIndex, file);
     }
   };
 
   if (!photos.length) return null;
 
   return (
-    <div className="relative w-full max-w-5xl mx-auto aspect-[3/2] bg-[#EAE5DF] rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/50 group/slideshow">
+    <div className="relative w-full max-w-5xl mx-auto aspect-[3/2] bg-[#F5F2EB] rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/50 group/slideshow">
       <AnimatePresence mode="wait">
         <motion.img
           key={currentIndex}
@@ -33,7 +32,7 @@ export function Slideshow({ photos, onReplacePhoto }: SlideshowProps) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-contain"
         />
       </AnimatePresence>
 
