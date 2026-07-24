@@ -1,0 +1,6 @@
+{
+  "name": "Chandini & Darshan Wedding",
+  "description": "Wedding memories of Chandini & Darshan in Bengaluru, India.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
