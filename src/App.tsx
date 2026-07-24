@@ -20,6 +20,43 @@ const INITIAL_PHOTOS = [
 const INITIAL_VIDEO = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
 const INITIAL_HERO = 'https://images.unsplash.com/photo-1583939000140-6c66ce62194c?auto=format&fit=crop&w=2000&q=80';
 
+const compressImage = (file: File, maxWidth = 1920, maxHeight = 1080): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
+          } else {
+            resolve(file);
+          }
+        }, 'image/jpeg', 0.85);
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+  });
+};
+
 export default function App() {
   const [heroImage, setHeroImage] = useState(INITIAL_HERO);
   const [photos, setPhotos] = useState(INITIAL_PHOTOS);
@@ -51,27 +88,29 @@ export default function App() {
   }, []);
 
   const handleReplacePhoto = async (index: number, file: File) => {
-    const newUrl = URL.createObjectURL(file);
-    setPhotos(prev => {
-      const copy = [...prev];
-      copy[index] = newUrl;
-      return copy;
-    });
     try {
-      await set(`photo_${index}`, file);
+      const compressedFile = await compressImage(file);
+      const newUrl = URL.createObjectURL(compressedFile);
+      setPhotos(prev => {
+        const copy = [...prev];
+        copy[index] = newUrl;
+        return copy;
+      });
+      await set(`photo_${index}`, compressedFile);
     } catch (err) {
-      console.error('Failed to save photo to IndexedDB:', err);
+      console.error('Failed to compress and save photo:', err);
     }
   };
 
   const handleReplaceHero = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setHeroImage(URL.createObjectURL(file));
       try {
-        await set('heroImage', file);
+        const compressedFile = await compressImage(file, 2560, 1440);
+        setHeroImage(URL.createObjectURL(compressedFile));
+        await set('heroImage', compressedFile);
       } catch (err) {
-        console.error('Failed to save hero image to IndexedDB:', err);
+        console.error('Failed to compress and save hero image:', err);
       }
     }
   };
