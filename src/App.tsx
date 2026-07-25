@@ -196,7 +196,7 @@ export default function App() {
 
           <VideoSection 
             videoUrl={video} 
-            onReplaceVideo={setVideo} 
+            onReplaceVideo={handleReplaceVideo} 
           />
         </section>
 
