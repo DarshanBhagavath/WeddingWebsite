@@ -17,7 +17,7 @@ const INITIAL_PHOTOS = [
   'https://images.unsplash.com/photo-1610173826079-994fb699d799?auto=format&fit=crop&w=1600&q=80'
 ];
 
-const INITIAL_VIDEO = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+const INITIAL_VIDEO = 'https://upload.wikimedia.org/wikipedia/commons/9/94/Punjabi_Wedding_by_Sumita_Roy.webm';
 const INITIAL_HERO = 'https://images.unsplash.com/photo-1583939000140-6c66ce62194c?auto=format&fit=crop&w=2000&q=80';
 
 const compressImage = (file: File, maxWidth = 1920, maxHeight = 1080): Promise<File> => {
