@@ -4,7 +4,6 @@
  */
 
 import { useState, useEffect } from 'react';
-import { get, set } from 'idb-keyval';
 import { MapPin, Calendar, Heart, Video, Upload, Edit3 } from 'lucide-react';
 import { Slideshow } from './components/Slideshow';
 import { VideoSection } from './components/VideoSection';
@@ -62,58 +61,23 @@ export default function App() {
   const [photos, setPhotos] = useState(INITIAL_PHOTOS);
   const [videos, setVideos] = useState<string[]>([INITIAL_VIDEO]);
 
-  // Load from IndexedDB on mount
+  // Load from Server on mount
   useEffect(() => {
     const loadMedia = async () => {
       try {
-        const storedHero = await get('heroImage');
-        if (storedHero) setHeroImage(URL.createObjectURL(storedHero));
-
-        const storedVideoCount = await get('video_count');
-        if (storedVideoCount) {
-          const storedVideos = [];
-          for (let i = 0; i < storedVideoCount; i++) {
-            const storedVideo = await get(`video_${i}`);
-            if (storedVideo) {
-              storedVideos.push(URL.createObjectURL(storedVideo));
-            } else if (i === 0) {
-              storedVideos.push(INITIAL_VIDEO);
-            }
+        const response = await fetch('/api/media');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.heroImage) setHeroImage(data.heroImage);
+          if (data.photos && data.photos.length > 0) {
+             setPhotos(data.photos.map((p: string) => p || INITIAL_PHOTOS[0]));
           }
-          if (storedVideos.length > 0) setVideos(storedVideos);
-        } else {
-          // Backward compatibility
-          const storedVideo = await get('video');
-          if (storedVideo) {
-            setVideos([URL.createObjectURL(storedVideo)]);
+          if (data.videos && data.videos.length > 0) {
+             setVideos(data.videos.map((v: string) => v || INITIAL_VIDEO));
           }
-        }
-
-        const storedPhotoCount = await get('photo_count');
-        if (storedPhotoCount) {
-          const storedPhotos = [];
-          for (let i = 0; i < storedPhotoCount; i++) {
-            const storedPhoto = await get(`photo_${i}`);
-            if (storedPhoto) {
-              storedPhotos.push(URL.createObjectURL(storedPhoto));
-            } else if (i < INITIAL_PHOTOS.length) {
-              storedPhotos.push(INITIAL_PHOTOS[i]);
-            }
-          }
-          if (storedPhotos.length > 0) setPhotos(storedPhotos);
-        } else {
-          // Backward compatibility
-          const storedPhotos = [...INITIAL_PHOTOS];
-          for (let i = 0; i < INITIAL_PHOTOS.length; i++) {
-            const storedPhoto = await get(`photo_${i}`);
-            if (storedPhoto) {
-              storedPhotos[i] = URL.createObjectURL(storedPhoto);
-            }
-          }
-          setPhotos(storedPhotos);
         }
       } catch (err) {
-        console.error('Failed to load media from IndexedDB:', err);
+        console.error('Failed to load media from Server:', err);
       }
     };
     loadMedia();
@@ -122,15 +86,16 @@ export default function App() {
   const handleReplacePhoto = async (index: number, file: File) => {
     try {
       const compressedFile = await compressImage(file);
-      const newUrl = URL.createObjectURL(compressedFile);
-      setPhotos(prev => {
-        const copy = [...prev];
-        copy[index] = newUrl;
-        return copy;
-      });
-      await set(`photo_${index}`, compressedFile);
-      const count = await get('photo_count') || INITIAL_PHOTOS.length;
-      await set('photo_count', Math.max(count as number, index + 1));
+      const formData = new FormData();
+      formData.append('file', compressedFile);
+      formData.append('index', index.toString());
+      formData.append('action', 'replace');
+
+      const res = await fetch('/api/media/photo', { method: 'POST', body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        setPhotos(data.photos);
+      }
     } catch (err) {
       console.error('Failed to compress and save photo:', err);
     }
@@ -139,11 +104,15 @@ export default function App() {
   const handleAddPhoto = async (file: File) => {
     try {
       const compressedFile = await compressImage(file);
-      const newUrl = URL.createObjectURL(compressedFile);
-      const newIndex = photos.length;
-      setPhotos(prev => [...prev, newUrl]);
-      await set(`photo_${newIndex}`, compressedFile);
-      await set('photo_count', newIndex + 1);
+      const formData = new FormData();
+      formData.append('file', compressedFile);
+      formData.append('action', 'add');
+
+      const res = await fetch('/api/media/photo', { method: 'POST', body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        setPhotos(data.photos);
+      }
     } catch (err) {
       console.error('Failed to compress and add photo:', err);
     }
@@ -154,8 +123,14 @@ export default function App() {
     if (file) {
       try {
         const compressedFile = await compressImage(file, 2560, 1440);
-        setHeroImage(URL.createObjectURL(compressedFile));
-        await set('heroImage', compressedFile);
+        const formData = new FormData();
+        formData.append('file', compressedFile);
+        
+        const res = await fetch('/api/media/hero', { method: 'POST', body: formData });
+        if (res.ok) {
+          const data = await res.json();
+          setHeroImage(data.url);
+        }
       } catch (err) {
         console.error('Failed to compress and save hero image:', err);
       }
@@ -163,28 +138,35 @@ export default function App() {
   };
 
   const handleReplaceVideo = async (index: number, file: File) => {
-    setVideos(prev => {
-      const copy = [...prev];
-      copy[index] = URL.createObjectURL(file);
-      return copy;
-    });
     try {
-      await set(`video_${index}`, file);
-      const count = await get('video_count') || 1;
-      await set('video_count', Math.max(count as number, index + 1));
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('index', index.toString());
+      formData.append('action', 'replace');
+
+      const res = await fetch('/api/media/video', { method: 'POST', body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        setVideos(data.videos);
+      }
     } catch (err) {
-      console.error('Failed to save video to IndexedDB:', err);
+      console.error('Failed to save video to Server:', err);
     }
   };
 
   const handleAddVideo = async (file: File) => {
-    const newIndex = videos.length;
-    setVideos(prev => [...prev, URL.createObjectURL(file)]);
     try {
-      await set(`video_${newIndex}`, file);
-      await set('video_count', newIndex + 1);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('action', 'add');
+
+      const res = await fetch('/api/media/video', { method: 'POST', body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        setVideos(data.videos);
+      }
     } catch (err) {
-      console.error('Failed to save video to IndexedDB:', err);
+      console.error('Failed to save video to Server:', err);
     }
   };
 
