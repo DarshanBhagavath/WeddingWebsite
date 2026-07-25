@@ -89,14 +89,29 @@ export default function App() {
           }
         }
 
-        const storedPhotos = [...INITIAL_PHOTOS];
-        for (let i = 0; i < INITIAL_PHOTOS.length; i++) {
-          const storedPhoto = await get(`photo_${i}`);
-          if (storedPhoto) {
-            storedPhotos[i] = URL.createObjectURL(storedPhoto);
+        const storedPhotoCount = await get('photo_count');
+        if (storedPhotoCount) {
+          const storedPhotos = [];
+          for (let i = 0; i < storedPhotoCount; i++) {
+            const storedPhoto = await get(`photo_${i}`);
+            if (storedPhoto) {
+              storedPhotos.push(URL.createObjectURL(storedPhoto));
+            } else if (i < INITIAL_PHOTOS.length) {
+              storedPhotos.push(INITIAL_PHOTOS[i]);
+            }
           }
+          if (storedPhotos.length > 0) setPhotos(storedPhotos);
+        } else {
+          // Backward compatibility
+          const storedPhotos = [...INITIAL_PHOTOS];
+          for (let i = 0; i < INITIAL_PHOTOS.length; i++) {
+            const storedPhoto = await get(`photo_${i}`);
+            if (storedPhoto) {
+              storedPhotos[i] = URL.createObjectURL(storedPhoto);
+            }
+          }
+          setPhotos(storedPhotos);
         }
-        setPhotos(storedPhotos);
       } catch (err) {
         console.error('Failed to load media from IndexedDB:', err);
       }
@@ -114,8 +129,23 @@ export default function App() {
         return copy;
       });
       await set(`photo_${index}`, compressedFile);
+      const count = await get('photo_count') || INITIAL_PHOTOS.length;
+      await set('photo_count', Math.max(count as number, index + 1));
     } catch (err) {
       console.error('Failed to compress and save photo:', err);
+    }
+  };
+
+  const handleAddPhoto = async (file: File) => {
+    try {
+      const compressedFile = await compressImage(file);
+      const newUrl = URL.createObjectURL(compressedFile);
+      const newIndex = photos.length;
+      setPhotos(prev => [...prev, newUrl]);
+      await set(`photo_${newIndex}`, compressedFile);
+      await set('photo_count', newIndex + 1);
+    } catch (err) {
+      console.error('Failed to compress and add photo:', err);
     }
   };
 
@@ -215,6 +245,7 @@ export default function App() {
           <Slideshow 
             photos={photos} 
             onReplacePhoto={handleReplacePhoto} 
+            onAddPhoto={handleAddPhoto}
           />
         </section>
 
