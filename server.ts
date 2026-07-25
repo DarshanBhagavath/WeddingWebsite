@@ -4,7 +4,10 @@ import fs from 'fs/promises';
 import { createServer as createViteServer } from 'vite';
 import multer from 'multer';
 
-const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
+const IS_PROD = process.env.NODE_ENV === 'production';
+const DATA_DIR = IS_PROD ? '/tmp' : process.cwd();
+const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
+const CONFIG_FILE = path.join(DATA_DIR, 'mediaConfig.json');
 
 // Ensure uploads directory exists
 fs.mkdir(UPLOADS_DIR, { recursive: true }).catch(console.error);
@@ -36,7 +39,7 @@ async function startServer() {
   };
 
   try {
-    const data = await fs.readFile(path.join(process.cwd(), 'mediaConfig.json'), 'utf-8');
+    const data = await fs.readFile(CONFIG_FILE, 'utf-8');
     const parsed = JSON.parse(data);
     mediaConfig.heroImage = parsed.heroImage || null;
     mediaConfig.photos = parsed.photos && parsed.photos.length > 0 ? parsed.photos : [null, null, null, null];
@@ -46,7 +49,11 @@ async function startServer() {
   }
 
   const saveConfig = async () => {
-    await fs.writeFile(path.join(process.cwd(), 'mediaConfig.json'), JSON.stringify(mediaConfig, null, 2));
+    try {
+      await fs.writeFile(CONFIG_FILE, JSON.stringify(mediaConfig, null, 2));
+    } catch (err) {
+      console.error('Failed to save config:', err);
+    }
   };
 
   app.get('/api/media', (req, res) => {
