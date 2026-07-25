@@ -85,7 +85,13 @@ export default function App() {
 
   const handleReplacePhoto = async (index: number, file: File) => {
     try {
-      const compressedFile = await compressImage(file);
+      let compressedFile = file;
+      try {
+        compressedFile = await compressImage(file);
+      } catch (err) {
+        console.warn('Compression failed, using original file', err);
+      }
+
       const formData = new FormData();
       formData.append('file', compressedFile);
       formData.append('index', index.toString());
@@ -95,15 +101,24 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setPhotos(data.photos.map((p: string, i: number) => p || INITIAL_PHOTOS[i] || INITIAL_PHOTOS[0]));
+      } else {
+        alert(`Failed to save photo: ${res.statusText}`);
       }
     } catch (err) {
-      console.error('Failed to compress and save photo:', err);
+      console.error('Failed to save photo:', err);
+      alert('Network error while saving photo.');
     }
   };
 
   const handleAddPhoto = async (file: File) => {
     try {
-      const compressedFile = await compressImage(file);
+      let compressedFile = file;
+      try {
+        compressedFile = await compressImage(file);
+      } catch (err) {
+        console.warn('Compression failed, using original file', err);
+      }
+
       const formData = new FormData();
       formData.append('file', compressedFile);
       formData.append('action', 'add');
@@ -112,9 +127,12 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setPhotos(data.photos.map((p: string, i: number) => p || INITIAL_PHOTOS[i] || INITIAL_PHOTOS[0]));
+      } else {
+        alert(`Failed to add photo: ${res.statusText}. The file might be too large.`);
       }
     } catch (err) {
-      console.error('Failed to compress and add photo:', err);
+      console.error('Failed to add photo:', err);
+      alert('Network error while adding photo.');
     }
   };
 
@@ -122,7 +140,13 @@ export default function App() {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        const compressedFile = await compressImage(file, 2560, 1440);
+        let compressedFile = file;
+        try {
+          compressedFile = await compressImage(file, 2560, 1440);
+        } catch (err) {
+          console.warn('Compression failed, using original file', err);
+        }
+
         const formData = new FormData();
         formData.append('file', compressedFile);
         
@@ -130,9 +154,12 @@ export default function App() {
         if (res.ok) {
           const data = await res.json();
           setHeroImage(data.url);
+        } else {
+          alert(`Failed to update cover photo: ${res.statusText}`);
         }
       } catch (err) {
-        console.error('Failed to compress and save hero image:', err);
+        console.error('Failed to save hero image:', err);
+        alert('Network error while saving cover photo.');
       }
     }
   };
@@ -148,9 +175,12 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setVideos(data.videos.map((v: string) => v || INITIAL_VIDEO));
+      } else {
+        alert(`Failed to replace video: ${res.statusText}. The file might be too large.`);
       }
     } catch (err) {
       console.error('Failed to save video to Server:', err);
+      alert('Network error while saving video.');
     }
   };
 
@@ -164,9 +194,12 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setVideos(data.videos.map((v: string) => v || INITIAL_VIDEO));
+      } else {
+        alert(`Failed to add video: ${res.statusText}. The file might be too large.`);
       }
     } catch (err) {
       console.error('Failed to save video to Server:', err);
+      alert('Network error while saving video.');
     }
   };
 
