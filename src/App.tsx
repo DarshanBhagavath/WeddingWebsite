@@ -60,7 +60,7 @@ const compressImage = (file: File, maxWidth = 1920, maxHeight = 1080): Promise<F
 export default function App() {
   const [heroImage, setHeroImage] = useState(INITIAL_HERO);
   const [photos, setPhotos] = useState(INITIAL_PHOTOS);
-  const [video, setVideo] = useState(INITIAL_VIDEO);
+  const [videos, setVideos] = useState<string[]>([INITIAL_VIDEO]);
 
   // Load from IndexedDB on mount
   useEffect(() => {
@@ -69,8 +69,25 @@ export default function App() {
         const storedHero = await get('heroImage');
         if (storedHero) setHeroImage(URL.createObjectURL(storedHero));
 
-        const storedVideo = await get('video');
-        if (storedVideo) setVideo(URL.createObjectURL(storedVideo));
+        const storedVideoCount = await get('video_count');
+        if (storedVideoCount) {
+          const storedVideos = [];
+          for (let i = 0; i < storedVideoCount; i++) {
+            const storedVideo = await get(`video_${i}`);
+            if (storedVideo) {
+              storedVideos.push(URL.createObjectURL(storedVideo));
+            } else if (i === 0) {
+              storedVideos.push(INITIAL_VIDEO);
+            }
+          }
+          if (storedVideos.length > 0) setVideos(storedVideos);
+        } else {
+          // Backward compatibility
+          const storedVideo = await get('video');
+          if (storedVideo) {
+            setVideos([URL.createObjectURL(storedVideo)]);
+          }
+        }
 
         const storedPhotos = [...INITIAL_PHOTOS];
         for (let i = 0; i < INITIAL_PHOTOS.length; i++) {
@@ -115,10 +132,27 @@ export default function App() {
     }
   };
 
-  const handleReplaceVideo = async (file: File) => {
-    setVideo(URL.createObjectURL(file));
+  const handleReplaceVideo = async (index: number, file: File) => {
+    setVideos(prev => {
+      const copy = [...prev];
+      copy[index] = URL.createObjectURL(file);
+      return copy;
+    });
     try {
-      await set('video', file);
+      await set(`video_${index}`, file);
+      const count = await get('video_count') || 1;
+      await set('video_count', Math.max(count as number, index + 1));
+    } catch (err) {
+      console.error('Failed to save video to IndexedDB:', err);
+    }
+  };
+
+  const handleAddVideo = async (file: File) => {
+    const newIndex = videos.length;
+    setVideos(prev => [...prev, URL.createObjectURL(file)]);
+    try {
+      await set(`video_${newIndex}`, file);
+      await set('video_count', newIndex + 1);
     } catch (err) {
       console.error('Failed to save video to IndexedDB:', err);
     }
@@ -195,8 +229,9 @@ export default function App() {
           </div>
 
           <VideoSection 
-            videoUrl={video} 
+            videoUrls={videos} 
             onReplaceVideo={handleReplaceVideo} 
+            onAddVideo={handleAddVideo}
           />
         </section>
 
