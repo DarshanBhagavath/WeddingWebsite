@@ -70,7 +70,7 @@ export default function App() {
           const data = await response.json();
           if (data.heroImage) setHeroImage(data.heroImage);
           if (data.photos && data.photos.length > 0) {
-             setPhotos(data.photos.map((p: string) => p || INITIAL_PHOTOS[0]));
+             setPhotos(data.photos.map((p: string, i: number) => p || INITIAL_PHOTOS[i] || INITIAL_PHOTOS[0]));
           }
           if (data.videos && data.videos.length > 0) {
              setVideos(data.videos.map((v: string) => v || INITIAL_VIDEO));
@@ -94,7 +94,7 @@ export default function App() {
       const res = await fetch('/api/media/photo', { method: 'POST', body: formData });
       if (res.ok) {
         const data = await res.json();
-        setPhotos(data.photos);
+        setPhotos(data.photos.map((p: string, i: number) => p || INITIAL_PHOTOS[i] || INITIAL_PHOTOS[0]));
       }
     } catch (err) {
       console.error('Failed to compress and save photo:', err);
@@ -111,7 +111,7 @@ export default function App() {
       const res = await fetch('/api/media/photo', { method: 'POST', body: formData });
       if (res.ok) {
         const data = await res.json();
-        setPhotos(data.photos);
+        setPhotos(data.photos.map((p: string, i: number) => p || INITIAL_PHOTOS[i] || INITIAL_PHOTOS[0]));
       }
     } catch (err) {
       console.error('Failed to compress and add photo:', err);
@@ -147,7 +147,7 @@ export default function App() {
       const res = await fetch('/api/media/video', { method: 'POST', body: formData });
       if (res.ok) {
         const data = await res.json();
-        setVideos(data.videos);
+        setVideos(data.videos.map((v: string) => v || INITIAL_VIDEO));
       }
     } catch (err) {
       console.error('Failed to save video to Server:', err);
@@ -163,7 +163,7 @@ export default function App() {
       const res = await fetch('/api/media/video', { method: 'POST', body: formData });
       if (res.ok) {
         const data = await res.json();
-        setVideos(data.videos);
+        setVideos(data.videos.map((v: string) => v || INITIAL_VIDEO));
       }
     } catch (err) {
       console.error('Failed to save video to Server:', err);

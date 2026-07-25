@@ -30,13 +30,16 @@ async function startServer() {
 
   let mediaConfig = {
     heroImage: null as string | null,
-    photos: [] as string[],
-    videos: [] as string[]
+    photos: [null, null, null, null] as (string | null)[],
+    videos: [null] as (string | null)[]
   };
 
   try {
     const data = await fs.readFile(path.join(process.cwd(), 'mediaConfig.json'), 'utf-8');
-    mediaConfig = JSON.parse(data);
+    const parsed = JSON.parse(data);
+    mediaConfig.heroImage = parsed.heroImage || null;
+    mediaConfig.photos = parsed.photos && parsed.photos.length > 0 ? parsed.photos : [null, null, null, null];
+    mediaConfig.videos = parsed.videos && parsed.videos.length > 0 ? parsed.videos : [null];
   } catch (err) {
     // Initial run or file missing
   }
